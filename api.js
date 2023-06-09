@@ -1,60 +1,74 @@
-// {
-//     data:{
-//         number1:5,
-//         number2:7,
-//         operation:"add",
-//         result:12
-//     },
-// }
-
-
-
-
 const express = require('express');
 const app = express();
-const port = 8000;
+const port = 6000;
+
+const users = {};
 
 app.use(express.json());
 
-app.post('/calci/:operation', (req, res) => {
-  const { number1, number2 } = req.body;
-  const operation = req.params.operation;
-  let result;
+app.post('/user/register', (req, res) => {
+  const { username, password, email } = req.body;
 
-  switch (operation) {
-    case 'add':
-      result = number1 + number2;
-      break;
-    case 'sub':
-      result = number1 - number2;
-      break;
-    case 'mul':
-      result = number1 * number2;
-      break;
-    case 'div':
-      if (number2 !== 0) {
-        result = number1 / number2;
-      } else {
-        return res.json({ error: 'Cannot divide by zero' });
-      }
-      break;
-    case 'mod':
-      result = number1 % number2;
-      break;
-    default:
-      return res.json({ error: 'Invalid operation' });
+  if (users[username]) {
+    return res.status(400).json({ success: false, message: 'Username already exists' });
   }
 
-  const response = {
-    number1,
-    number2,
-    operation,
-    result
-  };
+  const newUser = { username, password, email };
+  users[username] = newUser;
 
-  res.json(response);
+  return res.status(200).json({ success: true, message: 'User registered successfully' });
+});
+
+app.post('/user/login', (req, res) => {
+  const { username, password } = req.body;
+  const user = users[username];
+
+  if (!user || user.password !== password) {
+    return res.status(401).json({ success: false, message: 'Invalid username or password' });
+  }
+
+  return res.status(200).json({ success: true, message: 'User logged in successfully' });
+});
+
+app.get('/user/profile/:username', (req, res) => {
+  const { username } = req.params;
+  const user = users[username];
+
+  if (!user) {
+    return res.status(404).json({ success: false, message: 'User not found' });
+  }
+
+  return res.status(200).json({
+    success: true,
+    message: 'User profile retrieved successfully',
+    profile: { username: user.username, email: user.email }
+  });
+});
+
+app.put('/user/update/:username', (req, res) => {
+  const { username } = req.params;
+  const { newEmail } = req.body;
+  const user = users[username];
+
+  if (!user) {
+    return res.status(404).json({ success: false, message: 'User not found' });
+  }
+
+  user.email = newEmail;
+  return res.status(200).json({ success: true, message: 'User profile updated successfully' });
+});
+
+app.delete('/user/delete/:username', (req, res) => {
+  const { username } = req.params;
+
+  if (!users[username]) {
+    return res.status(404).json({ success: false, message: 'User not found' });
+  }
+
+  delete users[username];
+  return res.status(200).json({ success: true, message: 'User deleted successfully' });
 });
 
 app.listen(port, () => {
-  console.log(`Calculator API running on port ${port}`);
+  console.log(`Server is running on port ${port}`);
 });
